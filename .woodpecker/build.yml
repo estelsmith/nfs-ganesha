@@ -1,0 +1,21 @@
+branches: "main"
+pipeline:
+    build:
+        image: "registry.home.estelsmith.com/ci-docker:latest"
+        privileged: true
+        volumes:
+            - "/var/run/docker.sock:/var/run/docker.sock"
+        secrets:
+            - "registry_domain"
+            - "registry_username"
+            - "registry_password"
+        commands:
+            - >
+                docker login
+                -u "$${REGISTRY_USERNAME}"
+                -p "$${REGISTRY_PASSWORD}"
+                "$${REGISTRY_DOMAIN}"
+            - >
+                docker buildx build .
+                -t "$${REGISTRY_DOMAIN}/nfs-ganesha:latest"
+                --output type=registry
