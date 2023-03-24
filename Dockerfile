@@ -42,7 +42,6 @@ RUN cmake . \
     -D USE_GSS=OFF \
     -D USE_9P=OFF
 
-RUN sed -i "s/-DUSE_DBUS=ON/-DUSE_DBUS=OFF/g" nfs-ganesha.spec
 RUN cmake --build . --target dist
 
 RUN <<EOF
@@ -80,7 +79,7 @@ COPY --from=builder --chown=root /home/builduser/rpmbuild/RPMS /rpms
 WORKDIR /rpms
 RUN <<EOT
     dnf -y install \
-        procps-ng which \
+        procps-ng which dbus-daemon rpcbind nfs-utils-coreos \
         noarch/nfs-ganesha-selinux-${GANESHA_VERSION}-0.1.el9.noarch.rpm \
         x86_64/libntirpc-${GANESHA_VERSION}-0.1.el9.x86_64.rpm \
         x86_64/nfs-ganesha-${GANESHA_VERSION}-0.1.el9.x86_64.rpm \
