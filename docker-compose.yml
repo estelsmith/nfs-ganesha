@@ -1,0 +1,141 @@
+version: "3.8"
+
+x-templates:
+    x-ganesha-image: &ganesha-image "ganesha:test"
+    x-tmpfs-driver: &tmpfs-driver
+        driver: local
+        driver_opts:
+            type: tmpfs
+            device: tmpfs
+            o: size=16m
+
+services:
+    pause:
+        image: "rancher/pause:3.6"
+        cap_drop:
+            - ALL
+        read_only: true
+        restart: unless-stopped
+        networks:
+            - default
+
+    rpcbind:
+        image: *ganesha-image
+        entrypoint: ["/rpcbind-entrypoint.sh"]
+        restart: unless-stopped
+        cap_drop:
+            - ALL
+        cap_add:
+            - DAC_OVERRIDE
+            - CHOWN
+            - NET_BIND_SERVICE
+            - SETGID
+            - SETUID
+            - FOWNER
+        network_mode: "service:pause"
+        pid: "service:pause"
+        volumes:
+            -
+                type: volume
+                source: run
+                target: /run
+
+    statd:
+        image: *ganesha-image
+        entrypoint: ["/statd-entrypoint.sh"]
+        restart: unless-stopped
+        cap_drop:
+            - ALL
+        cap_add:
+            - DAC_OVERRIDE
+            - CHOWN
+            - NET_BIND_SERVICE
+            - SETGID
+            - SETPCAP
+            - SETUID
+        depends_on:
+            - rpcbind
+        network_mode: "service:pause"
+        pid: "service:pause"
+        volumes:
+            -
+                type: volume
+                source: run
+                target: /run
+            -
+                type: volume
+                source: statd-lib
+                target: /var/lib/nfs
+
+    dbus:
+        image: *ganesha-image
+        entrypoint: ["/dbus-entrypoint.sh"]
+        restart: unless-stopped
+        cap_drop:
+            - ALL
+        cap_add:
+            - SETGID
+            - SETPCAP
+            - SETUID
+        network_mode: "service:pause"
+        pid: "service:pause"
+        volumes:
+            -
+                type: volume
+                source: dbus-run
+                target: /run/dbus
+            -
+                type: volume
+                source: dbus-lib
+                target: /var/lib/dbus
+
+    ganesha:
+        image: *ganesha-image
+        restart: unless-stopped
+        privileged: true
+#        cap_drop:
+#            - ALL
+#        cap_add:
+#            - CHOWN
+#            - DAC_OVERRIDE
+#            - DAC_READ_SEARCH
+#            - FOWNER
+#            - FSETID
+#            - NET_BIND_SERVICE
+#            - SETGID
+#            - SETUID
+        security_opt:
+            - seccomp:unconfined
+        depends_on:
+            - rpcbind
+            - statd
+            - dbus
+        network_mode: "service:pause"
+        pid: "service:pause"
+        volumes:
+            -
+                type: volume
+                source: run
+                target: /run
+            -
+                type: volume
+                source: dbus-run
+                target: /run/dbus
+            -
+                type: volume
+                source: ganesha-lib
+                target: /var/lib/nfs/ganesha
+            - "./test.conf:/config.conf"
+            - ".:/test"
+
+volumes:
+    run:
+        <<: *tmpfs-driver
+    statd-lib:
+    dbus-run:
+        <<: *tmpfs-driver
+    dbus-lib:
+    ganesha-lib:
+
+networks:
+    default:
