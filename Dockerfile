@@ -88,6 +88,10 @@ RUN <<EOT
 EOT
 RUN mkdir /var/run/ganesha
 
+COPY dbus-entrypoint.sh /
+COPY rpcbind-entrypoint.sh /
+COPY statd-entrypoint.sh /
+COPY ganesha-entrypoint.sh /
+
 WORKDIR /
-ENTRYPOINT ["/usr/bin/ganesha.nfsd"]
-CMD ["-F", "-f", "/config.conf"]
+ENTRYPOINT ["/ganesha-entrypoint.sh"]
